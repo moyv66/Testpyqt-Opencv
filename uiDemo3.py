@@ -5,7 +5,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(700, 480)
+        MainWindow.resize(700, 520)
         MainWindow.setCursor(QtGui.QCursor(QtCore.Qt.ArrowCursor))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("../images/youcansSmallLogo.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)

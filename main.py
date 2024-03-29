@@ -31,6 +31,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):  # 继承 QMainWindow 类和 Ui_
         img = self.openSlot()
         qImg = self.cvToQImage(img)  # 转为 PyQt 图像格式
         self.label.setPixmap(QPixmap.fromImage(qImg))
+        self.label.setScaledContents(True)  # 允许图像缩放以适应 QLabel 的大小
 
         return
 
@@ -63,26 +64,17 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):  # 继承 QMainWindow 类和 Ui_
             # 如果没有加载图像，则退出函数
             img = self.button_2()
 
-            # 定义要被打马赛克的矩形区域
-        x, y, w, h = 100, 100, 100, 100  # 例如：从(100, 100)开始，宽高均为100像素
-        roi = img[y:y + h, x:x + w]  # 获取ROI（感兴趣区域）
+        height, width = img.shape[:2]
+        x, y = width // 2 - 50, height // 2 - 50  # 假设马赛克区域是100x100大小
+        width_box, height_box = 200, 200
 
-        # 应用马赛克效果
-        # 将ROI分成小块，这里以10x10像素为一块
-        block_size = 10
-        for i in range(0, roi.shape[0], block_size):
-            for j in range(0, roi.shape[1], block_size):
-                # 获取当前块的边界，避免超出ROI范围
-                bi = min(i + block_size, roi.shape[0])
-                bj = min(j + block_size, roi.shape[1])
-                block = roi[i:bi, j:bj]
-                # 计算块内像素的平均值
-                avg_color = cv.blur(block, (block_size, block_size))
-                # 将块内所有像素替换为平均值
-                roi[i:bi, j:bj] = avg_color
+        # 创建马赛克效果，这里使用均值滤波作为示例
+        # 你也可以使用其他类型的滤波，如中值滤波
+        mosaic_area = cv2.blur(img[y:y + height_box, x:x + width_box], (50, 50))  # 更改(20, 20)来调整马赛克大小
 
-                # 将处理后的ROI放回原图像
-        img[y:y + h, x:x + w] = roi
+        # 将马赛克区域放回原图片
+        img[y:y + height_box, x:x + width_box] = mosaic_area
+
 
         # 显示处理后的图像
         qImg = self.cvToQImage1(img)
@@ -120,10 +112,10 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):  # 继承 QMainWindow 类和 Ui_
         else:
             raise TypeError("cv_img must be a numpy array with dtype=np.uint8")
 
-
-
     def button_2(self):
         img = self.openSlot()
+        if img is not None:
+            print('非空')
         return img
 
     def openSlot(self, flag=1):  # 读取图像文件
@@ -149,7 +141,6 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):  # 继承 QMainWindow 类和 Ui_
                 print(f"Image saved to {saveName}")
         else:
             print("No image to save in the QLabel.")
-
 
     def cvToQImage(self, image):  # OpenCV图像 转换为 PyQt图像
         # 8-bits unsigned, NO. OF CHANNELS=1
