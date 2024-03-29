@@ -4,6 +4,8 @@
 # Crated：2023-01-31
 
 import sys
+
+import cv2
 import cv2 as cv
 import numpy as np
 from PyQt5 import QtCore
@@ -20,8 +22,9 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):  # 继承 QMainWindow 类和 Ui_
         self.pushButton_1.clicked.connect(self.click_pushButton_1)  # 点击 pushButton_1 触发
         self.pushButton_2.clicked.connect(self.click_pushButton_2)  # 点击 pushButton_2 触发
         self.pushButton_4.clicked.connect(self.saveSlot)
-        #self.pushButton_3.clicked.connect(self.close)  # 点击 pushButton_3 关闭窗口
+        # self.pushButton_3.clicked.connect(self.close)  # 点击 pushButton_3 关闭窗口
         self.pushButton_3.clicked.connect(self.click_pushButton_3)  # 点击 pushButton_3 关闭窗口
+        self.pushButton_5.clicked.connect(self.click_pushButton_5)  # 点击 pushButton_3 关闭窗口
         return
 
     def click_pushButton_1(self):
@@ -51,10 +54,40 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):  # 继承 QMainWindow 类和 Ui_
 
         return
 
+    def click_pushButton_5(self):
+        pixmap = self.label.pixmap()
+        if pixmap is not None:
+            img = self.qPixmapToCV(pixmap)
 
+        if img is None:
+            # 如果没有加载图像，则退出函数
+            img = self.button_2()
 
+            # 定义要被打马赛克的矩形区域
+        x, y, w, h = 100, 100, 100, 100  # 例如：从(100, 100)开始，宽高均为100像素
+        roi = img[y:y + h, x:x + w]  # 获取ROI（感兴趣区域）
 
+        # 应用马赛克效果
+        # 将ROI分成小块，这里以10x10像素为一块
+        block_size = 10
+        for i in range(0, roi.shape[0], block_size):
+            for j in range(0, roi.shape[1], block_size):
+                # 获取当前块的边界，避免超出ROI范围
+                bi = min(i + block_size, roi.shape[0])
+                bj = min(j + block_size, roi.shape[1])
+                block = roi[i:bi, j:bj]
+                # 计算块内像素的平均值
+                avg_color = cv.blur(block, (block_size, block_size))
+                # 将块内所有像素替换为平均值
+                roi[i:bi, j:bj] = avg_color
 
+                # 将处理后的ROI放回原图像
+        img[y:y + h, x:x + w] = roi
+
+        # 显示处理后的图像
+        qImg = self.cvToQImage1(img)
+        self.label.setPixmap(QPixmap.fromImage(qImg))
+        return
 
     def click_pushButton_2(self):
         pixmap = self.label.pixmap()
@@ -63,7 +96,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):  # 继承 QMainWindow 类和 Ui_
 
         if img is None:
             img = self.button_2()
-            #return  # 如果没有加载图像，则退出函数
+            # return  # 如果没有加载图像，则退出函数
 
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)  # 转换为灰度图像
         print("click_pushButton_2", img.shape, gray.shape)
@@ -71,9 +104,28 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):  # 继承 QMainWindow 类和 Ui_
         self.label.setPixmap(QPixmap.fromImage(qImg))
 
         return
+
+    def cvToQImage1(self, cv_img):
+        height, width, channel = cv_img.shape
+        bytesPerLine = 3 * width
+        if cv_img.dtype == np.uint8:  # 确保图像数据类型是uint8
+            if channel == 3:
+                # OpenCV的默认格式是BGR，需要转换为RGB
+                cv_img = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+            # 创建一个连续的字节字符串
+            cv_img_bytes = cv_img.tobytes()
+            # 使用连续的字节字符串创建QImage对象
+            qImg = QImage(cv_img_bytes, width, height, bytesPerLine, QImage.Format_RGB888)
+            return qImg
+        else:
+            raise TypeError("cv_img must be a numpy array with dtype=np.uint8")
+
+
+
     def button_2(self):
         img = self.openSlot()
         return img
+
     def openSlot(self, flag=1):  # 读取图像文件
         # OpenCV 读取图像文件
         fileName, _ = QFileDialog.getOpenFileName(self, "Open Image", "../images/", "*.png *.jpg *.tif")
@@ -97,6 +149,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):  # 继承 QMainWindow 类和 Ui_
                 print(f"Image saved to {saveName}")
         else:
             print("No image to save in the QLabel.")
+
 
     def cvToQImage(self, image):  # OpenCV图像 转换为 PyQt图像
         # 8-bits unsigned, NO. OF CHANNELS=1
@@ -139,6 +192,7 @@ class MyMainWindow(QMainWindow, Ui_MainWindow):  # 继承 QMainWindow 类和 Ui_
         image = np.array(ptr, dtype=np.uint8).reshape(shape)  # 定义 OpenCV 图像
         image = image[..., :3]
         return image
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)  # 在 QApplication 方法中使用，创建应用程序对象
